@@ -1,251 +1,339 @@
-let allInsights = []; // Store all insights globally
-
-async function fetchInsights() {
-    try {
-        const response = await fetch("http://127.0.0.1:8000/insights");
-        const data = await response.json();
-        console.log("Fetched data:", data); // Debugging log
-        allInsights = data.insights; // Store all insights
-        displayInsights(allInsights); // Display all insights initially
-        setupSearch(); // Set up search functionality
-        displayOrdersSummary(allInsights); // Display orders summary
-    } catch (error) {
-        console.error("Error fetching insights:", error); // Debugging log
-    }
-}
-
-function displayInsights(insights) {
-    console.log("Displaying insights:", insights); // Debugging log
-
-    const allReservationsContainer = document.getElementById("all-reservations");
-    const vipGuestsContainer = document.getElementById("vip-guests");
-    const dietaryRestrictionsContainer = document.getElementById("dietary-restrictions");
-    const specialOccasionsContainer = document.getElementById("special-occasions");
-
-    // Clear all sections
-    allReservationsContainer.innerHTML = "";
-    vipGuestsContainer.innerHTML = "";
-    dietaryRestrictionsContainer.innerHTML = "";
-    specialOccasionsContainer.innerHTML = "";
-
-    // Display insights in each section
-    insights.forEach(insight => {
-        const card = document.createElement("div");
-        card.className = "insight-card fade-in";
-
-        // Add color-coded borders
-        if (insight.special_occasions.some(occasion => occasion.toLowerCase().includes("vip"))) {
-            card.classList.add("vip");
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morning Huddle</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
         }
-        if (insight.dietary_restrictions.length > 0) {
-            card.classList.add("dietary-restriction");
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2.5rem;
         }
-        if (insight.special_occasions.length > 0) {
-            card.classList.add("special-occasion");
+        .search-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center; /* Ensure all elements are vertically aligned */
+        }
+        #search,
+        .date-picker,
+        .search-button {
+            height: 40px;
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: 'Arial', sans-serif;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        #search {
+            flex: 1; /* Take up remaining space */
+        }
+        #search:focus,
+        .date-picker:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+        .date-picker {
+            background-color: white;
+            cursor: pointer;
+        }
+        .search-button {
+            height: 40px;
+            padding: 8px 20px; /* Adjusted padding */
+            border: none;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 14px; /* Match font size */
+        }
+        .search-button:hover {
+            background-color: #0056b3;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background-color: #007bff;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .tab:hover {
+            background-color: #0056b3;
+        }
+        .tab.active {
+            background-color: #0056b3;
+        }
+        .tab-content {
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .tab-content.active {
+            display: flex;
+        }
+        .insight-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .insight-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .insight-card h3 {
+            margin: 0;
+            color: #007bff;
+            font-size: 1.5rem;
+        }
+        .insight-card p {
+            margin: 5px 0;
+            color: #555;
+        }
+        .insight-card p strong {
+            color: #333;
+        }
+        .vip {
+            border-left: 5px solid gold;
+        }
+        .dietary-restriction {
+            border-left: 5px solid #28a745;
+        }
+        .special-occasion {
+            border-left: 5px solid #dc3545;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
-        card.innerHTML = `
-            <h3>${insight.name}</h3>
-            <p><strong>Reservation:</strong> ${insight.reservation_time}</p>
-            <p><strong>Dietary Restrictions:</strong> ${insight.dietary_restrictions.join(", ")}</p>
-            <p><strong>Special Occasions:</strong> ${insight.special_occasions.join(", ")}</p>
-            <p><strong>Notes:</strong> ${insight.notes}</p>
-        `;
-
-        allReservationsContainer.appendChild(card);
-
-        // Add to VIP Guests section
-        if (insight.special_occasions.some(occasion => occasion.toLowerCase().includes("vip"))) {
-            const vipCard = card.cloneNode(true);
-            vipGuestsContainer.appendChild(vipCard);
+        /* Creative Enhancements */
+        .search-container {
+            position: relative;
+        }
+        .search-container::before {
+            content: "🔍";
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #888;
+            pointer-events: none;
+        }
+        #search {
+            padding-left: 32px; /* Add space for the search icon */
+        }
+        .date-picker {
+            background-color: #f9f9f9;
+        }
+        .search-button {
+            height: 55px;
+            padding: 8px 20px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .search-button:hover {
+            background-color: #0056b3; /* Darker shade on hover */
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background-color: #007bff;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 14px; /* Match font size */
+            font-weight: bold; /* Match font weight */
+        }
+        .tab:hover {
+            background-color: #0056b3;
+        }
+        .tab.active {
+            background-color: #0056b3;
+        }
+        .tab-content {
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .tab-content.active {
+            display: flex;
+        }
+        .insight-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .insight-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .insight-card h3 {
+            margin: 0;
+            color: #007bff;
+            font-size: 1.5rem;
+        }
+        .insight-card p {
+            margin: 5px 0;
+            color: #555;
+        }
+        .insight-card p strong {
+            color: #333;
+        }
+        .vip {
+            border-left: 5px solid gold;
+        }
+        .dietary-restriction {
+            border-left: 5px solid #28a745;
+        }
+        .special-occasion {
+            border-left: 5px solid #dc3545;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
-        // Add to Dietary Restrictions section
-        if (insight.dietary_restrictions.length > 0) {
-            const dietaryCard = card.cloneNode(true);
-            dietaryRestrictionsContainer.appendChild(dietaryCard);
+        /* Creative Enhancements */
+        .search-container {
+            position: relative;
+        }
+        .search-container::before {
+            content: "🔍";
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #888;
+            pointer-events: none;
+        }
+        #search {
+            padding-left: 32px; /* Add space for the search icon */
+        }
+        .date-picker {
+            background-color: #f9f9f9;
         }
 
-        // Add to Special Occasions section
-        if (insight.special_occasions.length > 0) {
-            const occasionCard = card.cloneNode(true);
-            specialOccasionsContainer.appendChild(occasionCard);
+        <style>
+         .orders-summary {
+             margin-bottom: 20px; /* Add space below the order summary */
+         }
+
+        .orders-summary-item {
+            margin-bottom: 10px; /* Add space between each order item */
         }
-    });
-}
 
-function setupSearch() {
-    const searchInput = document.getElementById("search");
+        .guest-insights {
+            margin-top: 50px; /* Add space above the guest insights */
+        }
 
-    searchInput.addEventListener("input", () => {
-        const query = searchInput.value.trim().toLowerCase();
+        .guest-insight {
+            margin-top: 15px; /* Add space between each guest insight */
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
 
-        // Check if the query is a date (YYYY-MM-DD format)
-        const isDateQuery = /^\d{4}-\d{2}-\d{2}$/.test(query);
+        .guest-insight p {
+            margin: 5px 0; /* Add space between lines in guest insights */
+        }
 
-        const filteredInsights = allInsights.filter(insight => {
-            // Search by name, dietary restrictions, or special occasions
-            const matchesText =
-                insight.name?.toLowerCase().includes(query) ||
-                insight.dietary_restrictions?.some(tag => tag.toLowerCase().includes(query)) ||
-                insight.special_occasions?.some(occasion => occasion.toLowerCase().includes(query));
+        .guest-insight strong {
+            display: block; /* Ensure guest names are on their own line */
+            margin-bottom: 5px; /* Add space below guest names */
+        }
+    </style>
 
-            // Search by date (if the query is a valid date)
-            const matchesDate = isDateQuery && insight.reservation_time?.includes(query);
+    <style>
+        .orders-summary-heading {
+            margin-bottom: 20px; /* Add space below the Orders Summary heading */
+        }
+        .orders-summary-item {
+            margin-bottom: 10px; /* Add space between each order item */
+        }
+        .guest-insights-heading {
+            margin-top: 20px; /* Add space above the Guest Insights heading */
+        }
+        .guest-insight {
+            margin-top: 15px; /* Add space between each guest insight */
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        .guest-insight p {
+            margin: 5px 0; /* Add space between lines in guest insights */
+        }
+        .guest-insight strong {
+            display: block; /* Ensure guest names are on their own line */
+            margin-bottom: 5px; /* Add space below guest names */
+        }
+    </style>
 
-            return matchesText || matchesDate;
-        });
+    </style>
+</head>
+<body>
+<h1>Morning Huddle</h1>
+<div class="search-container">
+    <input type="text" id="search" placeholder="Search by name, dietary restrictions, or special occasions...">
+    <input type="date" id="date-search" class="date-picker">
+    <button onclick="filterByDate()" class="search-button">Search by Date</button>
+</div>
 
-        displayInsights(filteredInsights); // Display filtered insights
-    });
-}
+<div class="tabs">
+    <div class="tab active" onclick="showTab('all-reservations')">All Reservations</div>
+    <div class="tab" onclick="showTab('vip-guests')">VIP Guests</div>
+    <div class="tab" onclick="showTab('dietary-restrictions')">Dietary Restrictions</div>
+    <div class="tab" onclick="showTab('special-occasions')">Special Occasions</div>
+    <div class="tab" onclick="showTab('orders-summary')">Orders Summary</div>
+</div>
 
-function filterByDate() {
-    const dateInput = document.getElementById("date-search");
-    const selectedDate = dateInput.value;
+<div id="all-reservations" class="tab-content active"></div>
+<div id="vip-guests" class="tab-content"></div>
+<div id="dietary-restrictions" class="tab-content"></div>
+<div id="special-occasions" class="tab-content"></div>
+<div id="orders-summary" class="tab-content"></div>
 
-    if (!selectedDate) {
-        displayInsights(allInsights); // Show all insights if no date is selected
-        return;
-    }
-
-    const filteredInsights = allInsights.filter(insight =>
-        insight.reservation_time.includes(selectedDate)
-    );
-
-    displayInsights(filteredInsights);
-}
-
-function displayOrdersSummary(insights) {
-    const ordersSummaryContainer = document.getElementById("orders-summary");
-    ordersSummaryContainer.innerHTML = "";
-
-    const ordersSummary = {};
-    const guestInsights = [];
-
-    insights.forEach(insight => {
-        // Aggregate orders
-        insight.orders.forEach(order => {
-            if (!ordersSummary[order.item]) {
-                ordersSummary[order.item] = 0;
-            }
-            ordersSummary[order.item] += order.quantity || 1; // Use quantity if available
-        });
-
-        // Generate guest insights
-        const guestInsight = {
-            name: insight.name,
-            preferences: getShortPreferences(insight),
-            thingsToNote: getThingsToNote(insight),
-            uniqueInsights: generateUniqueInsights(insight) // LLM-generated insights
-        };
-        guestInsights.push(guestInsight);
-    });
-
-    // Display orders summary
-    const summaryCard = document.createElement("div");
-    summaryCard.className = "insight-card";
-
-    let summaryHTML = "<h3 class='orders-summary-heading'>Orders Summary</h3>";
-    for (const [item, count] of Object.entries(ordersSummary)) {
-        summaryHTML += `<p class="orders-summary-item"><strong>${item}:</strong> ${count}</p>`;
-    }
-
-    // Display guest insights
-    summaryHTML += "<h3 class='guest-insights-heading'>Guest Insights</h3>";
-    guestInsights.forEach(guest => {
-        summaryHTML += `
-            <div class="guest-insight">
-                <strong>${guest.name}</strong>
-                <p>Preferences: ${guest.preferences}</p>
-                <p>Things to Note: ${guest.thingsToNote}</p>
-                <p>Unique Insights: ${guest.uniqueInsights}</p>
-            </div>
-        `;
-    });
-
-    summaryCard.innerHTML = summaryHTML;
-    ordersSummaryContainer.appendChild(summaryCard);
-}
-
-function getShortPreferences(insight) {
-    const preferences = [];
-    if (insight.dietary_restrictions.length > 0) {
-        preferences.push(`Dietary: ${insight.dietary_restrictions.join(", ")}`);
-    }
-    if (insight.special_occasions.length > 0) {
-        preferences.push(`Special: ${insight.special_occasions.join(", ")}`);
-    }
-    return preferences.length > 0 ? preferences.join(" | ") : "None";
-}
-
-function getThingsToNote(insight) {
-    const thingsToNote = [];
-    if (insight.dietary_restrictions.length > 0) {
-        thingsToNote.push(`Ensure ${insight.dietary_restrictions.join(", ")} options are available.`);
-    }
-    if (insight.special_occasions.length > 0) {
-        thingsToNote.push(`Acknowledge ${insight.special_occasions.join(", ")}.`);
-    }
-    return thingsToNote.length > 0 ? thingsToNote.join(" ") : "None";
-}
-
-function generateUniqueInsights(insight) {
-    // Simulate LLM-generated insights (replace with actual OpenAI API call if needed)
-    const uniqueInsights = [];
-    if (insight.notes.length > 0) {
-        uniqueInsights.push(`Loves: ${insight.notes[0].split(".")[0]}.`); // Use the first sentence of notes
-    }
-    if (insight.special_occasions.length > 0) {
-        uniqueInsights.push(`Celebrating: ${insight.special_occasions.join(", ")}.`);
-    }
-    return uniqueInsights.length > 0 ? uniqueInsights.join(" ") : "No unique insights";
-}
-
-function filterByDate() {
-    const dateInput = document.getElementById("date-search");
-    const selectedDate = dateInput.value;
-
-    if (!selectedDate) {
-        displayInsights(allInsights); // Show all insights if no date is selected
-        return;
-    }
-
-    // Filter insights by the selected date
-    const filteredInsights = allInsights.filter(insight =>
-        insight.reservation_time === selectedDate
-    );
-
-    console.log("Filtered Insights by Date:", filteredInsights); // Debugging log
-    displayInsights(filteredInsights);
-}
-
-function showTab(tabId) {
-    console.log("Showing tab:", tabId); // Debugging log
-
-    // Hide all tab contents
-    document.querySelectorAll(".tab-content").forEach(tab => {
-        tab.style.display = "none";
-    });
-
-    // Show the selected tab content
-    const selectedTab = document.getElementById(tabId);
-    if (selectedTab) {
-        selectedTab.style.display = "flex";
-    } else {
-        console.error("Tab not found:", tabId); // Debugging log
-    }
-
-    // Update active tab
-    document.querySelectorAll(".tab").forEach(tab => {
-        tab.classList.remove("active");
-    });
-    const activeTab = document.querySelector(`[onclick="showTab('${tabId}')"]`);
-    if (activeTab) {
-        activeTab.classList.add("active");
-    } else {
-        console.error("Active tab not found:", tabId); // Debugging log
-    }
-}
-
-fetchInsights();
+<script src="script.js"></script>
+</body>
+</html>
