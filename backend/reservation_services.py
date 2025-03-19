@@ -1,9 +1,13 @@
-import openai
+from dotenv import load_dotenv
 import os
-from backend.models.load_data import DinersList
+import openai
+from backend.data.load_data import DinersList
 
-# Load API Key from environment variable
-OPENAI_API_KEY = os.getenv("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")
+# Load environment variables from .env file
+load_dotenv()
+
+# Get the OpenAI API key
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 openai.api_key = OPENAI_API_KEY
 
 def generate_guest_insights(diner):
@@ -43,11 +47,60 @@ def generate_guest_insights(diner):
     """
 
     try:
+        # Make the API call to OpenAI
         response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}]
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that provides insights for restaurant staff."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=200  # Adjust as needed
         )
         return response["choices"][0]["message"]["content"]
     except Exception as e:
-        return f"Error generating insights: {str(e)}"
+        # Log the error and return a fallback message
+        print(f"Error generating insights: {str(e)}")
+        return "Unable to generate insights at this time. Please check the guest's details manually."
 
+# Example usage
+if __name__ == "__main__":
+    # Create a test Diner object
+    diner = DinersList(
+        diners=[
+            {
+                "name": "Emily Chen",
+                "reviews": [
+                    {
+                        "restaurant_name": "French Laudure",
+                        "date": "2023-11-15",
+                        "rating": 5,
+                        "content": "I visited last autumn, and it was unforgettable."
+                    }
+                ],
+                "reservations": [
+                    {
+                        "date": "2024-05-20",
+                        "number_of_people": 4,
+                        "orders": [
+                            {
+                                "item": "Duck Confit",
+                                "dietary_tags": ["gluten-free"],
+                                "price": 45.0
+                            }
+                        ]
+                    }
+                ],
+                "emails": [
+                    {
+                        "date": "2024-05-18",
+                        "subject": "Gluten-Free Options",
+                        "combined_thread": "Hello, I'm thrilled to return to French Laudure."
+                    }
+                ]
+            }
+        ]
+    ).diners[0]
+
+    # Generate insights
+    insights = generate_guest_insights(diner)
+    print(insights)
