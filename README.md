@@ -18,6 +18,6 @@
         </ul>
     </p>
     <p>
-        The tool is easy to use, with a clean design and simple controls. It’s built with HTML, CSS, and JavaScript, and works in any web browser. 
+        The tool is easy to use, with a clean design and simple controls. It’s built with HTML, CSS, JavaScript, and Python, and works in any web browser. 
     </p>
 </body>
