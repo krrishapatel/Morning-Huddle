@@ -13,8 +13,8 @@
     <p>
         Features:
         <ul>
-            <li><strong>Search Bar:</strong> Quickly find guests by name, dietary needs, or special requests.</li>
-            <li><strong>LLM Integration:</strong> Uses OpenAI to generate insights about guests, like preferences and past experiences.</li>
+            <li>Search Bar:</strong> Quickly find guests by name, dietary needs, or special requests.</li>
+            <li>LLM Integration:</strong> Uses OpenAI to generate insights about guests, like preferences and past experiences.</li>
         </ul>
     </p>
     <p>
